@@ -1,0 +1,9 @@
+# Empire production - NEVER commit binaries/cache
+.gradle/
+.cache/
+.terraform.d/
+*.jar
+**/node_modules/
+**/target/
+pip/
+terraform
