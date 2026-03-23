@@ -1,16 +1,14 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
 
-TOTAL_TESTS=6
-GREEN_THRESHOLD=5
-PASSED=$(find ../reports/ -name "test-*.md" 2>/dev/null | wc -l)
-FAILED=$((TOTAL_TESTS - PASSED))
+PASSED=$(find /data/data/com.termux/files/home/nana-devops/reports/ -name "test-*.md" 2>/dev/null | wc -l)
 
 echo "🧠 NANA-DEVOPS HEALTH SCORE 🧠"
-echo "Passed: $PASSED/$TOTAL_TESTS"
+echo "Passed: $PASSED test reports in ~/nana-devops/reports/"
+echo "Location: /data/data/com.termux/files/home/nana-devops/reports/"
 
 if [[ $PASSED -ge 5 ]]; then
   echo "✅ GREEN = PRODUCTION READY"
 else
-  echo "🟡 YELLOW = $(ls ../reports/ | wc -l) reports generated"
+  echo "🟡 YELLOW = $PASSED reports generated"
 fi
