@@ -2,14 +2,12 @@
 set -euo pipefail
 
 SUBSYSTEM="${1:?Subsystem required}"
-export SUBSYSTEM
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export RUN_ID
 
 echo "=== Master Test Harness: $SUBSYSTEM ($RUN_ID) ==="
 
-set-run-id "$RUN_ID"
-../bin/run-sop-real-test
-report-test-timer "$RUN_ID"
-
-echo "=== $SUBSYSTEM TEST COMPLETE ✅ ==="
+# Assume current directory is repo root (~/ on Termux, /home/runner/work/... in CI)
+bin/set-run-id "$RUN_ID"
+bin/run-sop-real-test
+bin/report-test-timer "$RUN_ID"
