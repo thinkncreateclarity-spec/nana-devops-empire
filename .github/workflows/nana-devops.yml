@@ -15,7 +15,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Run timer test
         run: |
-          cd nana-devops
-          ../bin/run-test timer
+          pwd
+          ls
+          ls bin
+          ls nana-devops
+          ./bin/run-test timer
