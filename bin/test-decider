@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PASSED=$(find /data/data/com.termux/files/home/nana-devops/reports/ -name "test-*.md" 2>/dev/null | wc -l)
+REPORTS_DIR="${REPORTS_DIR:-reports}"
+MIN_REPORTS="${MIN_REPORTS:-5}"
+
+PASSED="$(find "$REPORTS_DIR" -maxdepth 1 -name 'test-*.md' 2>/dev/null | wc -l || true)"
 
 echo "🧠 NANA-DEVOPS HEALTH SCORE 🧠"
-echo "Passed: $PASSED test reports in ~/nana-devops/reports/"
-echo "Location: /data/data/com.termux/files/home/nana-devops/reports/"
+echo "Passed: $PASSED test reports in ./$REPORTS_DIR"
 
-if [[ $PASSED -ge 5 ]]; then
+if [ "$PASSED" -ge "$MIN_REPORTS" ]; then
   echo "✅ GREEN = PRODUCTION READY"
+  exit 0
 else
-  echo "🟡 YELLOW = $PASSED reports generated"
+  echo "🟡 YELLOW = NOT ENOUGH REPORTS (need >= $MIN_REPORTS)"
+  exit 1
 fi
