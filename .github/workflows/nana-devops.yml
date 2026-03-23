@@ -16,10 +16,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run timer test
+      - name: Run full test matrix
         run: |
           pwd
           ls
           ls bin
           ls nana-devops
-          ./bin/run-test timer
+          ./bin/run-test-matrix
+
+      - name: Upload reports artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nana-devops-reports
+          path: reports/
+
+      - name: Health Status Summary
+        run: |
+          ./bin/test-decider
