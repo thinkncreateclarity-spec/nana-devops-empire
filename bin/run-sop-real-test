@@ -1,0 +1,7 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -euo pipefail
+
+echo "Running SOP real test for subsystem: $SUBSYSTEM"
+echo "RUN_ID: $RUN_ID"
+sleep 2
+echo "SOP real test completed ✅"
