@@ -7,30 +7,35 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
-    jobs:
+
+jobs:
   test-matrix:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      - name: Setup Environment
+
+    - name: Setup Environment
       run: |
         sudo apt-get update
         sudo apt-get install -y bash coreutils findutils
-         - name: Run Test Matrix
+
+    - name: Run Test Matrix
       run: |
         cd nana-devops
-        chmod +x ../bin/*
+        chmod +x ../bin/run-test ../bin/run-sop-real-test ../bin/set-run-id ../bin/report-test-timer ../bin/run-test-matrix ../bin/test-decider
         ../bin/run-test-matrix
         ../bin/test-decider
-            - name: Upload Reports
+
+    - name: Upload Test Reports
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: nana-devops-reports
         path: nana-devops/reports/
-         - name: Health Status Summary
+        retention-days: 30
+
+    - name: Health Status
       run: |
         cd nana-devops
         ../bin/test-decider
-
