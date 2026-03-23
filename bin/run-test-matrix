@@ -1,14 +1,13 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-SUBSYSTEMS="gitops revenue timer todo password mpc-watchdog"
-RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
+echo "🧠 NANA-DEVOPS TEST MATRIX ($(date +%Y%m%d-%H%M%S)) 🧠"
 
-echo "🧠 NANA-DEVOPS TEST MATRIX ($RUN_ID) 🧠"
-
-for subsystem in $SUBSYSTEMS; do
-  echo "→ Testing $subsystem (primary path)"
-  ../bin/run-test "$subsystem" || echo "❌ $subsystem failed - redundancy path"
+for SUB in gitops revenue timer todo password mpc-watchdog; do
+  echo "→ Testing $SUB (primary path)"
+  if ! ./bin/run-test "$SUB"; then
+    echo "❌ $SUB failed - redundancy path"
+  fi
 done
 
 echo "MATRIX COMPLETE 📊 $(date)"
