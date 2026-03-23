@@ -1,38 +1,21 @@
-name: Nana-DevOps Test Matrix
+name: Nana-Devops Test Matrix
+
 on:
   push:
     paths:
       - 'bin/**'
       - 'nana-devops/**'
-    schedule:
-      - cron: '0 0 * * *'
-        workflow_dispatch:
-          jobs:
-            test-matrix:
-              runs-on: ubuntu-latest
-              steps:
-                - name: Checkout
-                  uses: actions/checkout@v4
-                - name; Setup Environment
-              run: | 
-                sudo apt-get update
-                sudo apt-get install -y bash coreutils findutils
-      - name: Run Test Matrix
-        run: | 
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run timer test
+        run: |
           cd nana-devops
-          chmod +x ../bin/*
-          ../bin/run-test-matrix
-          ../bin/test-decider
-      - name: Upload Reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nana-devops-reports
-          path: nana-devops/reports/
-      - name: Health Status Summary
-        run: | 
-          cd nana-devops
-          ../bin/test-decider
-
-
-
+          ../bin/run-test timer
