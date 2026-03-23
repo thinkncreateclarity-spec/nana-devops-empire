@@ -3,10 +3,31 @@ set -euo pipefail
 
 echo "🧠 NANA-DEVOPS TEST MATRIX ($(date +%Y%m%d-%H%M%S)) 🧠"
 
-for SUB in gitops revenue timer todo password mpc-watchdog; do
-  echo "→ Testing $SUB (primary path)"
-  if ! ./bin/run-test "$SUB"; then
-    echo "❌ $SUB failed - redundancy path"
+# Format: "subsystem|fallback-command"
+SUBSYSTEMS=(
+  "gitops|./gitops --version"
+  "revenue|./revenue --help"
+  "timer|./timer --help"
+  "todo|./todo list || ./todo --help"
+  "password|./password --help"
+  "mpc-watchdog|./mpc-watchdog.sh --help || ./mpc-watchdog.sh status"
+)
+
+for entry in "${SUBSYSTEMS[@]}"; do
+  SUBSYSTEM="${entry%%|*}"
+  FALLBACK_CMD="${entry#*|}"
+
+  echo "→ Testing $SUBSYSTEM (primary path)"
+  if ./bin/run-test "$SUBSYSTEM"; then
+    echo "✅ $SUBSYSTEM primary test PASSED"
+  else
+    echo "⚠️  $SUBSYSTEM primary test FAILED – running fallback smoke test"
+    # Fallback is best-effort; do not fail the whole matrix if it fails
+    if bash -c "$FALLBACK_CMD"; then
+      echo "🟡 $SUBSYSTEM fallback smoke test PASSED (DEGRADED)"
+    else
+      echo "🔴 $SUBSYSTEM fallback smoke test FAILED"
+    fi
   fi
 done
 
