@@ -2,6 +2,8 @@
 set -euo pipefail
 
 SUBSYSTEM="${1:?Subsystem required}"
+export SUBSYSTEM
+
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 export RUN_ID
 
