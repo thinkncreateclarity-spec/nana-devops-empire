@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RUN_ID="$1"
+REPORTS_DIR="/data/data/com.termux/files/home/reports"
+mkdir -p "$REPORTS_DIR"
+echo "$RUN_ID" > "$REPORTS_DIR/current-run-id"
+echo "🆔 Set RUN_ID=$RUN_ID in $REPORTS_DIR"

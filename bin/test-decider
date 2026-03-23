@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 PASSED=$(find /data/data/com.termux/files/home/nana-devops/reports/ -name "test-*.md" 2>/dev/null | wc -l)
