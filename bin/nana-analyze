@@ -34,16 +34,29 @@ def parse_reports():
             content = [line.strip() for line in f if line.strip()]
         sub, st, cm, ct = None, None, None, None
         for line in content:
+            # Subsystem line: "**Subsystem:** timer"
             if line.startswith('**Subsystem:**'):
                 sub = line.split('**Subsystem:**', 1)[1].strip()
+
+            # Status line: "**Status:** ✅ PASS (2/2 criteria met)"
             elif line.startswith('**Status:**'):
-                if 'PASS' in line:
+                # Strip the "**Status:**" prefix first
+                status_text = line.split('**Status:**', 1)[1].strip()
+
+                # Pull out PASS/FAIL even if there is an emoji before it
+                if 'PASS' in status_text:
                     st = 'PASS'
-                elif 'FAIL' in line:
+                elif 'FAIL' in status_text:
                     st = 'FAIL'
-                if '(' in line and 'criteria met' in line:
-                    tok = line.split('(', 1)[1].split(')', 1)[0].split()[0]
-                    cm, ct = int(tok.split('/')[0]), int(tok.split('/')[1])
+
+                # Extract the "2/2" inside parentheses
+                if '(' in status_text and 'criteria met' in status_text:
+                    # status_text looks like: "✅ PASS (2/2 criteria met)"
+                    inside_parens = status_text.split('(', 1)[1].split(')', 1)[0]
+                    # inside_parens is "2/2 criteria met"
+                    counts_token = inside_parens.split()[0]  # "2/2"
+                    cm_str, ct_str = counts_token.split('/', 1)
+                    cm, ct = int(cm_str), int(ct_str)
         if sub and st and cm is not None:
             rows.append({
                 'run_id': run_id,
