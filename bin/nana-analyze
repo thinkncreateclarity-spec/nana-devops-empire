@@ -140,9 +140,7 @@ def write_analysis(rows, risk, stats):
 
     os.makedirs(os.path.dirname(ANALYSIS_FILE), exist_ok=True)
     with open(ANALYSIS_FILE, 'w') as f:
-        f.write('
-'.join(lines) + '
-')
+        f.write('\n'.join(lines) + '\n')
 
 
 def write_risk_json(risk, stats):
