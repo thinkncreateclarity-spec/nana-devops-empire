@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+import os, csv
+from collections import defaultdict
+from datetime import datetime
+
+REPORTS_DIR = os.path.expanduser('~/reports')
+METRICS_FILE = os.path.expanduser('~/reports/history.csv')
+ANALYSIS_FILE = os.path.expanduser('~/reports/analysis-latest.md')
+
+def parse_reports():
+    rows = []
+    if not os.path.isdir(REPORTS_DIR):
+        return rows
+    for fname in sorted(os.listdir(REPORTS_DIR)):
+        if not (fname.startswith('test-') and fname.endswith('.md')):
+            continue
+        run_id = fname[5:-3]
+        path = os.path.join(REPORTS_DIR, fname)
+        with open(path) as f:
+            content = [line.strip() for line in f if line.strip()]
+        sub, st, cm, ct = None, None, None, None
+        for line in content:
+            if line.startswith('**Subsystem:**'):
+                sub = line.split('**Subsystem:**', 1)[1].strip()
+            elif line.startswith('**Status:**'):
+                if 'PASS' in line:
+                    st = 'PASS'
+                elif 'FAIL' in line:
+                    st = 'FAIL'
+                if '(' in line and 'criteria met' in line:
+                    tok = line.split('(', 1)[1].split(')', 1)[0].split()[0]
+                    cm, ct = int(tok.split('/')[0]), int(tok.split('/')[1])
+        if sub and st and cm is not None:
+            rows.append({'run_id': run_id, 'subsystem': sub, 'status': st,
+                         'criteria_met': cm, 'criteria_total': ct})
+    return rows
+
+def write_history(rows):
+    existing = set()
+    if os.path.exists(METRICS_FILE):
+        with open(METRICS_FILE) as f:
+            for r in csv.DictReader(f):
+                existing.add(r['run_id'])
+    new_rows = [r for r in rows if r['run_id'] not in existing]
+    write_header = not os.path.exists(METRICS_FILE)
+    with open(METRICS_FILE, 'a', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=['run_id','subsystem','status','criteria_met','criteria_total'])
+        if write_header:
+            writer.writeheader()
+        writer.writerows(new_rows)
+    return len(new_rows)
+
+def compute_risk(rows):
+    stats = defaultdict(lambda: {'total': 0, 'fail': 0})
+    for r in rows:
+        stats[r['subsystem']]['total'] += 1
+        if r['status'] == 'FAIL':
+            stats[r['subsystem']]['fail'] += 1
+    risk = {}
+    for sub, s in stats.items():
+        risk[sub] = round(s['fail'] / s['total'], 2) if s['total'] > 0 else 0.0
+    return risk, stats
+
+def write_analysis(rows, risk, stats):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    lines = [
+        '# Nana-DevOps Sidecar Analytics',
+        '**Generated:** ' + now,
+        '**Reports analyzed:** ' + str(len(rows)),
+        '',
+        '## Per-Subsystem Risk Scores',
+        '',
+        '| Subsystem | Runs | Failures | Risk | Level |',
+        '|-----------|------|----------|------|-------|',
+    ]
+    for sub, s in sorted(stats.items()):
+        r = risk[sub]
+        level = 'LOW' if r < 0.2 else 'MEDIUM' if r < 0.5 else 'HIGH'
+        lines.append('| ' + sub + ' | ' + str(s['total']) + ' | ' + str(s['fail']) + ' | ' + str(r) + ' | ' + level + ' |')
+    lines += ['', '## Recommendation', '']
+    high = [s for s, r in risk.items() if r >= 0.5]
+    medium = [s for s, r in risk.items() if 0.2 <= r < 0.5]
+    if high:
+        lines.append('- HIGH risk: ' + ', '.join(high))
+    if medium:
+        lines.append('- MEDIUM risk: ' + ', '.join(medium))
+    if not high and not medium:
+        lines.append('- All subsystems stable. No action required.')
+    with open(ANALYSIS_FILE, 'w') as f:
+        f.write('
+'.join(lines) + '
+')
+
+if __name__ == '__main__':
+    rows = parse_reports()
+    added = write_history(rows)
+    risk, stats = compute_risk(rows)
+    write_analysis(rows, risk, stats)
+    print('Analyzed ' + str(len(rows)) + ' reports (' + str(added) + ' new -> history.csv)')
+    for sub, r in sorted(risk.items()):
+        s = stats[sub]
+        level = 'LOW' if r < 0.2 else 'MEDIUM' if r < 0.5 else 'HIGH'
+        print('  ' + level + '  ' + sub + ': risk=' + str(r) + ' (' + str(s['fail']) + '/' + str(s['total']) + ' failures)')
