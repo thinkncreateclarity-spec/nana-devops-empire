@@ -87,7 +87,7 @@ def write_analysis(rows, risk, stats):
     if not high and not medium:
         lines.append('- All subsystems stable. No action required.')
     with open(ANALYSIS_FILE, 'w') as f:
-        f.write('
+    f.write('
 '.join(lines) + '
 ')
 
