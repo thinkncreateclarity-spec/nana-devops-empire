@@ -24,6 +24,12 @@ jobs:
           ls nana-devops
           ./bin/run-test-matrix
 
+      - name: Run nana sidecar analyzer
+        run: |
+          ls reports || echo "no reports dir yet"
+          python3 bin/nana-analyze
+          ls reports
+
       - name: Upload reports artifact
         uses: actions/upload-artifact@v4
         with:
