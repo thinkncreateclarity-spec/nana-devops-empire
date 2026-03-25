@@ -34,27 +34,17 @@ def parse_reports():
             content = [line.strip() for line in f if line.strip()]
         sub, st, cm, ct = None, None, None, None
         for line in content:
-            # Subsystem line: "**Subsystem:** timer"
             if line.startswith('**Subsystem:**'):
                 sub = line.split('**Subsystem:**', 1)[1].strip()
-
-            # Status line: "**Status:** ✅ PASS (2/2 criteria met)"
             elif line.startswith('**Status:**'):
-                # Strip the "**Status:**" prefix first
                 status_text = line.split('**Status:**', 1)[1].strip()
-
-                # Pull out PASS/FAIL even if there is an emoji before it
                 if 'PASS' in status_text:
                     st = 'PASS'
                 elif 'FAIL' in status_text:
                     st = 'FAIL'
-
-                # Extract the "2/2" inside parentheses
                 if '(' in status_text and 'criteria met' in status_text:
-                    # status_text looks like: "✅ PASS (2/2 criteria met)"
                     inside_parens = status_text.split('(', 1)[1].split(')', 1)[0]
-                    # inside_parens is "2/2 criteria met"
-                    counts_token = inside_parens.split()[0]  # "2/2"
+                    counts_token = inside_parens.split()[0]
                     cm_str, ct_str = counts_token.split('/', 1)
                     cm, ct = int(cm_str), int(ct_str)
         if sub and st and cm is not None:
@@ -69,7 +59,6 @@ def parse_reports():
 
 
 def write_history(rows):
-    # Collect existing run_ids so we don't double-append old runs
     existing = set()
     if os.path.exists(METRICS_FILE):
         with open(METRICS_FILE) as f:
@@ -88,17 +77,17 @@ def write_history(rows):
         if write_header:
             writer.writeheader()
         for row in new_rows:
+            anomaly_id = 'ANOM-FAIL' if row.get('status') == 'FAIL' else ''
             out = {
                 'run_id': row.get('run_id', ''),
                 'subsystem': row.get('subsystem', ''),
                 'status': row.get('status', ''),
                 'criteria_met': row.get('criteria_met', 0),
                 'criteria_total': row.get('criteria_total', 0),
-                # new fields (defaults for now; upgraded later)
                 'commit_sha': os.getenv('GIT_COMMIT', 'local-dev'),
                 'env': os.getenv('NANA_ENV', 'local'),
-                'phase': os.getenv('NANA_PHASE', 'dev-loop'),
-                'anomaly_id': row.get('anomaly_id', ''),
+                'phase': os.getenv('NANA_PHASE', 'phase-3'),
+                'anomaly_id': anomaly_id,
             }
             writer.writerow(out)
 
@@ -141,6 +130,7 @@ def write_analysis(rows, risk, stats):
                 level=level,
             )
         )
+
     lines += ['', '## Recommendation', '']
     high = [s for s, r in risk.items() if r >= 0.5]
     medium = [s for s, r in risk.items() if 0.2 <= r < 0.5]
@@ -150,6 +140,20 @@ def write_analysis(rows, risk, stats):
         lines.append('- MEDIUM risk: ' + ', '.join(medium))
     if not high and not medium:
         lines.append('- All subsystems stable. No action required.')
+
+    anomalies = [r for r in rows if r.get('anomaly_id')]
+    lines += ['', '## Anomalies', '']
+    if anomalies:
+        for r in anomalies:
+            lines.append(
+                '- {run_id} | {subsystem} | {anomaly_id}'.format(
+                    run_id=r.get('run_id', ''),
+                    subsystem=r.get('subsystem', ''),
+                    anomaly_id=r.get('anomaly_id', ''),
+                )
+            )
+    else:
+        lines.append('- No anomalies detected.')
 
     os.makedirs(os.path.dirname(ANALYSIS_FILE), exist_ok=True)
     with open(ANALYSIS_FILE, 'w') as f:
