@@ -21,7 +21,7 @@ jobs:
           pwd
           ls
           ls bin
-          ls nana-devops
+          [ -d nana-devops ] && ls nana-devops || echo "nana-devops not present"
           ./bin/run-test-matrix
 
       - name: Run nana sidecar analyzer
