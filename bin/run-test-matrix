@@ -3,7 +3,6 @@ set -euo pipefail
 
 echo "🧠 NANA-DEVOPS TEST MATRIX ($(date +%Y%m%d-%H%M%S)) 🧠"
 
-# Format: "subsystem|fallback-command"
 SUBSYSTEMS=(
   "gitops|./gitops --version"
   "revenue|./revenue --help"
@@ -22,7 +21,6 @@ for entry in "${SUBSYSTEMS[@]}"; do
     echo "✅ $SUBSYSTEM primary test PASSED"
   else
     echo "⚠️  $SUBSYSTEM primary test FAILED – running fallback smoke test"
-    # Fallback is best-effort; do not fail the whole matrix if it fails
     if bash -c "$FALLBACK_CMD"; then
       echo "🟡 $SUBSYSTEM fallback smoke test PASSED (DEGRADED)"
     else
