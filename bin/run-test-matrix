@@ -3,6 +3,13 @@ set -euo pipefail
 
 echo "🧠 NANA-DEVOPS TEST MATRIX ($(date +%Y%m%d-%H%M%S)) 🧠"
 
+if [ -d nana-devops ]; then
+  echo "→ nana-devops directory present"
+  ls nana-devops
+else
+  echo "→ nana-devops not present (expected)"
+fi
+
 SUBSYSTEMS=(
   "gitops|./gitops --version"
   "revenue|./revenue --help"
