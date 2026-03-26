@@ -4,7 +4,7 @@ import csv
 import json
 import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPORTS_DIR = os.path.join(BASE_DIR, 'reports')
@@ -45,12 +45,12 @@ def parse_report_file(path):
     criteria_total = None
 
     for line in lines:
-        m = re.match(r'^\\*\\*Subsystem:\\*\\*\\s*(.+?)\\s*$', line)
+        m = re.match(r'^**Subsystem:**s*(.+?)s*$', line)
         if m:
             subsystem = m.group(1).strip()
             continue
 
-        m = re.match(r'^\\*\\*Status:\\*\\*\\s*(.+?)\\s*$', line)
+        m = re.match(r'^**Status:**s*(.+?)s*$', line)
         if m:
             status_text = m.group(1).strip()
             if 'PASS' in status_text:
@@ -58,18 +58,18 @@ def parse_report_file(path):
             elif 'FAIL' in status_text:
                 status = 'FAIL'
 
-            count_match = re.search(r'(\\d+)\\s*/\\s*(\\d+)\\s*criteria met', status_text, re.I)
+            count_match = re.search(r'(d+)s*/s*(d+)s*criteria met', status_text, re.I)
             if count_match:
                 criteria_met = int(count_match.group(1))
                 criteria_total = int(count_match.group(2))
             else:
-                count_match = re.search(r'(\\d+)\\s*/\\s*(\\d+)', status_text)
+                count_match = re.search(r'(d+)s*/s*(d+)', status_text)
                 if count_match:
                     criteria_met = int(count_match.group(1))
                     criteria_total = int(count_match.group(2))
             continue
 
-        m = re.match(r'^Pass:\\s*(\\d+)\\s*/\\s*(\\d+)\\s*criteria met\\s*$', line, re.I)
+        m = re.match(r'^Pass:s*(d+)s*/s*(d+)s*criteria mets*$', line, re.I)
         if m and criteria_met is None:
             criteria_met = int(m.group(1))
             criteria_total = int(m.group(2))
@@ -169,7 +169,7 @@ def risk_level(value):
 
 
 def write_analysis(rows, risk, stats):
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     lines = [
         '# Nana-DevOps Sidecar Analytics',
         f'**Generated:** {now}',
@@ -214,7 +214,7 @@ def write_risk_json(risk, stats):
     os.makedirs(REPORTS_DIR, exist_ok=True)
 
     data = {
-        'generated_at': datetime.utcnow().isoformat() + 'Z',
+        'generated_at': datetime.now(timezone.utc).isoformat(),
         'subsystems': {
             sub: {
                 'runs': s.get('total', 0),
