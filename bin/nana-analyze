@@ -184,9 +184,7 @@ def write_analysis(rows, risk, stats):
     for sub in sorted(stats.keys()):
         s = stats[sub]
         r = risk.get(sub, 0.0)
-        lines.append(
-            f'| {sub} | {s["total"]} | {s["fail"]} | {r} | {risk_level(r)} |'
-        )
+        lines.append(f'| {sub} | {s["total"]} | {s["fail"]} | {r} | {risk_level(r)} |')
 
     lines += ['', '## Recommendation', '']
     high = [sub for sub, value in risk.items() if value >= 0.5]
@@ -203,9 +201,7 @@ def write_analysis(rows, risk, stats):
     lines += ['', '## Anomalies', '']
     if anomalies:
         for r in anomalies:
-            lines.append(
-                f'- {r.get("run_id", "")} | {r.get("subsystem", "")} | {r.get("anomaly_id", "")}'
-            )
+            lines.append(f'- {r.get("run_id", "")} | {r.get("subsystem", "")} | {r.get("anomaly_id", "")}')
     else:
         lines.append('- No anomalies detected.')
 
