@@ -10,6 +10,13 @@ else
   echo "→ nana-devops not present (expected)"
 fi
 
+if [ -d upi-scam-scanner/scamshield-terminal ]; then
+  echo "→ scamshield-terminal directory present"
+  ls upi-scam-scanner/scamshield-terminal
+else
+  echo "→ scamshield-terminal not present (expected)"
+fi
+
 SUBSYSTEMS=(
   "gitops|./gitops --version"
   "revenue|./revenue --help"
