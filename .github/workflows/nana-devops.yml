@@ -5,6 +5,7 @@ on:
     paths:
       - 'bin/**'
       - 'nana-devops/**'
+      - 'upi-scam-scanner/**'
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
@@ -15,6 +16,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: false
+          clean: true
 
       - name: Run full test matrix
         run: |
@@ -22,6 +26,7 @@ jobs:
           ls
           ls bin
           [ -d nana-devops ] && ls nana-devops || echo "nana-devops not present"
+          [ -d upi-scam-scanner/scamshield-terminal ] && ls upi-scam-scanner/scamshield-terminal || echo "scamshield-terminal not present"
           ./bin/run-test-matrix
 
       - name: Run nana sidecar analyzer
