@@ -1,0 +1,8 @@
+flowchart TB
+  E[Event Sources] --> I[Ingestion]
+  I --> S[Storage]
+  S --> A[Analysis]
+  A --> C[Adaptive Control]
+  C --> O[Operations]
+  A --> D[Documentation/Reports]
+  C --> Sec[Security Controls]

@@ -1,0 +1,10 @@
+sequenceDiagram
+  participant GH as GitHub Actions
+  participant TM as Test Matrix
+  participant AN as Analyzer
+  participant DC as Decider
+
+  GH->>TM: run tests
+  TM->>AN: write reports
+  AN->>DC: summarize health
+  DC-->>GH: GREEN / AMBER / RED

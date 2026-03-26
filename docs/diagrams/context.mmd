@@ -1,0 +1,6 @@
+flowchart LR
+  User[Developer] --> CI[GitHub Actions CI]
+  CI --> Reports[reports/]
+  CI --> Analyzer[bin/nana-analyze]
+  Analyzer --> Health[bin/test-decider]
+  Health --> Decision[Health Status]
