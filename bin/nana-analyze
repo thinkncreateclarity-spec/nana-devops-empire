@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-import os, csv, json
+import os
+import csv
+import json
+import re
 from collections import defaultdict
 from datetime import datetime
 
-REPORTS_DIR = os.path.expanduser('~/reports')
-METRICS_FILE = os.path.expanduser('~/reports/history.csv')
-ANALYSIS_FILE = os.path.expanduser('~/reports/analysis-latest.md')
-RISK_JSON = os.path.expanduser('~/reports/risk-latest.json')
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPORTS_DIR = os.path.join(BASE_DIR, 'reports')
+METRICS_FILE = os.path.join(REPORTS_DIR, 'history.csv')
+ANALYSIS_FILE = os.path.join(REPORTS_DIR, 'analysis-latest.md')
+RISK_JSON = os.path.join(REPORTS_DIR, 'risk-latest.json')
 
 FIELDNAMES = [
     'run_id',
@@ -21,61 +25,110 @@ FIELDNAMES = [
 ]
 
 
+def read_text(path):
+    with open(path, encoding='utf-8', errors='replace') as f:
+        return f.read()
+
+
+def parse_report_file(path):
+    fname = os.path.basename(path)
+    if not (fname.startswith('test-') and fname.endswith('.md')):
+        return None
+
+    run_id = fname[len('test-'):-3]
+    text = read_text(path)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    subsystem = None
+    status = None
+    criteria_met = None
+    criteria_total = None
+
+    for line in lines:
+        m = re.match(r'^**Subsystem:**s*(.+?)s*$', line)
+        if m:
+            subsystem = m.group(1).strip()
+            continue
+
+        m = re.match(r'^**Status:**s*(.+?)s*$', line)
+        if m:
+            status_text = m.group(1).strip()
+            if 'PASS' in status_text:
+                status = 'PASS'
+            elif 'FAIL' in status_text:
+                status = 'FAIL'
+
+            count_match = re.search(r'(d+)s*/s*(d+)s*criteria met', status_text, re.I)
+            if count_match:
+                criteria_met = int(count_match.group(1))
+                criteria_total = int(count_match.group(2))
+            else:
+                count_match = re.search(r'(d+)s*/s*(d+)', status_text)
+                if count_match:
+                    criteria_met = int(count_match.group(1))
+                    criteria_total = int(count_match.group(2))
+            continue
+
+        m = re.match(r'^Pass:s*(d+)s*/s*(d+)s*criteria mets*$', line, re.I)
+        if m and criteria_met is None:
+            criteria_met = int(m.group(1))
+            criteria_total = int(m.group(2))
+
+    if not subsystem or not status or criteria_met is None or criteria_total is None:
+        return None
+
+    return {
+        'run_id': run_id,
+        'subsystem': subsystem,
+        'status': status,
+        'criteria_met': criteria_met,
+        'criteria_total': criteria_total,
+    }
+
+
 def parse_reports():
     rows = []
     if not os.path.isdir(REPORTS_DIR):
         return rows
+
     for fname in sorted(os.listdir(REPORTS_DIR)):
-        if not (fname.startswith('test-') and fname.endswith('.md')):
+        if fname == 'current-run-id':
             continue
-        run_id = fname[5:-3]
         path = os.path.join(REPORTS_DIR, fname)
-        with open(path) as f:
-            content = [line.strip() for line in f if line.strip()]
-        sub, st, cm, ct = None, None, None, None
-        for line in content:
-            if line.startswith('**Subsystem:**'):
-                sub = line.split('**Subsystem:**', 1)[1].strip()
-            elif line.startswith('**Status:**'):
-                status_text = line.split('**Status:**', 1)[1].strip()
-                if 'PASS' in status_text:
-                    st = 'PASS'
-                elif 'FAIL' in status_text:
-                    st = 'FAIL'
-                if '(' in status_text and 'criteria met' in status_text:
-                    inside_parens = status_text.split('(', 1)[1].split(')', 1)[0]
-                    counts_token = inside_parens.split()[0]
-                    cm_str, ct_str = counts_token.split('/', 1)
-                    cm, ct = int(cm_str), int(ct_str)
-        if sub and st and cm is not None:
-            rows.append({
-                'run_id': run_id,
-                'subsystem': sub,
-                'status': st,
-                'criteria_met': cm,
-                'criteria_total': ct,
-            })
+        if not os.path.isfile(path):
+            continue
+        row = parse_report_file(path)
+        if row:
+            rows.append(row)
+
     return rows
 
 
-def write_history(rows):
+def read_existing_run_ids():
     existing = set()
-    if os.path.exists(METRICS_FILE):
-        with open(METRICS_FILE) as f:
-            for r in csv.DictReader(f):
-                rid = r.get('run_id')
-                if rid:
-                    existing.add(rid)
+    if not os.path.exists(METRICS_FILE):
+        return existing
 
+    with open(METRICS_FILE, newline='', encoding='utf-8', errors='replace') as f:
+        for r in csv.DictReader(f):
+            rid = (r.get('run_id') or '').strip()
+            if rid:
+                existing.add(rid)
+    return existing
+
+
+def write_history(rows):
+    existing = read_existing_run_ids()
     new_rows = [r for r in rows if r['run_id'] not in existing]
 
-    os.makedirs(os.path.dirname(METRICS_FILE), exist_ok=True)
+    os.makedirs(REPORTS_DIR, exist_ok=True)
     write_header = not os.path.exists(METRICS_FILE)
 
-    with open(METRICS_FILE, 'a', newline='') as f:
+    with open(METRICS_FILE, 'a', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
         if write_header:
             writer.writeheader()
+
         for row in new_rows:
             anomaly_id = 'ANOM-FAIL' if row.get('status') == 'FAIL' else ''
             out = {
@@ -84,7 +137,7 @@ def write_history(rows):
                 'status': row.get('status', ''),
                 'criteria_met': row.get('criteria_met', 0),
                 'criteria_total': row.get('criteria_total', 0),
-                'commit_sha': os.getenv('GIT_COMMIT', 'local-dev'),
+                'commit_sha': os.getenv('GIT_COMMIT', os.getenv('GITHUB_SHA', 'local-dev')),
                 'env': os.getenv('NANA_ENV', 'local'),
                 'phase': os.getenv('NANA_PHASE', 'phase-3'),
                 'anomaly_id': anomaly_id,
@@ -100,44 +153,49 @@ def compute_risk(rows):
         stats[r['subsystem']]['total'] += 1
         if r['status'] == 'FAIL':
             stats[r['subsystem']]['fail'] += 1
+
     risk = {}
     for sub, s in stats.items():
         risk[sub] = round(s['fail'] / s['total'], 2) if s['total'] > 0 else 0.0
     return risk, stats
 
 
+def risk_level(value):
+    if value < 0.2:
+        return 'LOW'
+    if value < 0.5:
+        return 'MEDIUM'
+    return 'HIGH'
+
+
 def write_analysis(rows, risk, stats):
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     lines = [
         '# Nana-DevOps Sidecar Analytics',
-        '**Generated:** ' + now,
-        '**Reports analyzed:** ' + str(len(rows)),
+        f'**Generated:** {now}',
+        f'**Reports analyzed:** {len(rows)}',
         '',
         '## Per-Subsystem Risk Scores',
         '',
         '| Subsystem | Runs | Failures | Risk | Level |',
         '|-----------|------|----------|------|-------|',
     ]
-    for sub, s in sorted(stats.items()):
-        r = risk[sub]
-        level = 'LOW' if r < 0.2 else 'MEDIUM' if r < 0.5 else 'HIGH'
+
+    for sub in sorted(stats.keys()):
+        s = stats[sub]
+        r = risk.get(sub, 0.0)
         lines.append(
-            '| {sub} | {runs} | {fails} | {risk} | {level} |'.format(
-                sub=sub,
-                runs=s['total'],
-                fails=s['fail'],
-                risk=r,
-                level=level,
-            )
+            f'| {sub} | {s["total"]} | {s["fail"]} | {r} | {risk_level(r)} |'
         )
 
     lines += ['', '## Recommendation', '']
-    high = [s for s, r in risk.items() if r >= 0.5]
-    medium = [s for s, r in risk.items() if 0.2 <= r < 0.5]
+    high = [sub for sub, value in risk.items() if value >= 0.5]
+    medium = [sub for sub, value in risk.items() if 0.2 <= value < 0.5]
+
     if high:
-        lines.append('- HIGH risk: ' + ', '.join(high))
+        lines.append('- HIGH risk: ' + ', '.join(sorted(high)))
     if medium:
-        lines.append('- MEDIUM risk: ' + ', '.join(medium))
+        lines.append('- MEDIUM risk: ' + ', '.join(sorted(medium)))
     if not high and not medium:
         lines.append('- All subsystems stable. No action required.')
 
@@ -146,63 +204,50 @@ def write_analysis(rows, risk, stats):
     if anomalies:
         for r in anomalies:
             lines.append(
-                '- {run_id} | {subsystem} | {anomaly_id}'.format(
-                    run_id=r.get('run_id', ''),
-                    subsystem=r.get('subsystem', ''),
-                    anomaly_id=r.get('anomaly_id', ''),
-                )
+                f'- {r.get("run_id", "")} | {r.get("subsystem", "")} | {r.get("anomaly_id", "")}'
             )
     else:
         lines.append('- No anomalies detected.')
 
-    os.makedirs(os.path.dirname(ANALYSIS_FILE), exist_ok=True)
-    with open(ANALYSIS_FILE, 'w') as f:
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+    with open(ANALYSIS_FILE, 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines) + '\n')
 
 
 def write_risk_json(risk, stats):
-    """
-    Write per-subsystem risk snapshot to risk-latest.json.
-    """
-    os.makedirs(os.path.dirname(RISK_JSON), exist_ok=True)
+    os.makedirs(REPORTS_DIR, exist_ok=True)
 
     data = {
+        'generated_at': datetime.utcnow().isoformat() + 'Z',
         'subsystems': {
             sub: {
                 'runs': s.get('total', 0),
                 'failures': s.get('fail', 0),
                 'risk': float(risk.get(sub, 0.0)),
-                'level': (
-                    'LOW' if risk.get(sub, 0.0) < 0.2 else
-                    'MEDIUM' if risk.get(sub, 0.0) < 0.5 else
-                    'HIGH'
-                ),
+                'level': risk_level(risk.get(sub, 0.0)),
             }
             for sub, s in stats.items()
-        }
+        },
     }
 
-    with open(RISK_JSON, 'w') as f:
+    with open(RISK_JSON, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2)
 
 
-if __name__ == '__main__':
+def main():
     rows = parse_reports()
     added = write_history(rows)
     risk, stats = compute_risk(rows)
     write_analysis(rows, risk, stats)
     write_risk_json(risk, stats)
 
-    print('Analyzed ' + str(len(rows)) + ' reports (' + str(added) + ' new -> history.csv)')
-    for sub, r in sorted(risk.items()):
+    print(f'Analyzed {len(rows)} reports ({added} new -> history.csv)')
+    for sub in sorted(risk.keys()):
+        r = risk[sub]
         s = stats[sub]
-        level = 'LOW' if r < 0.2 else 'MEDIUM' if r < 0.5 else 'HIGH'
-        print(
-            '  {level}  {sub}: risk={risk} ({fail}/{total} failures)'.format(
-                level=level,
-                sub=sub,
-                risk=r,
-                fail=s['fail'],
-                total=s['total'],
-            )
-        )
+        level = risk_level(r)
+        print(f'  {level}  {sub}: risk={r} ({s["fail"]}/{s["total"]} failures)')
+
+
+if __name__ == '__main__':
+    main()
