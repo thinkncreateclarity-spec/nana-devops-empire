@@ -24,3 +24,13 @@ jobs:
           chmod +x scripts/init-architecture.sh scripts/run-analysis.sh
           scripts/init-architecture.sh
           scripts/run-analysis.sh
+
+      - name: Enforce risk threshold
+        run: |
+          # Fail if risk score > 0.5
+          score=$(jq -r '.score' reports/risk-latest.json)
+          echo "Risk score from analyzer: $score"
+
+          # Compare as float; exit 1 if score > 0.5
+          awk -v s="$score" 'BEGIN { exit (s > 0.5 ? 1 : 0) }'
+        shell: bash
