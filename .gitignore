@@ -2,3 +2,6 @@ current-run-id
 /test-*.md
 
 /reports/
+
+scripts/__pycache__/
+bin/__pycache__/
