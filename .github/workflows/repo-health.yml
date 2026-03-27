@@ -1,0 +1,26 @@
+name: Repo Health
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run architecture + analysis
+        run: |
+          chmod +x scripts/init-architecture.sh scripts/run-analysis.sh
+          scripts/init-architecture.sh
+          scripts/run-analysis.sh
