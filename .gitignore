@@ -1,7 +1,10 @@
 current-run-id
 /test-*.md
-
 /reports/
 
 scripts/__pycache__/
 bin/__pycache__/
+
+# Runtime logs
+*.log
+logs/
