@@ -25,6 +25,11 @@ jobs:
           scripts/init-architecture.sh
           scripts/run-analysis.sh
 
+      - name: Show repo health summary
+        run: |
+          chmod +x bin/nana-health-ci
+          bin/nana-health-ci
+
       - name: Enforce risk threshold
         run: |
           # Fail if risk score > 0.5

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+scripts/run-analysis.sh >/dev/null 2>&1
+jq -r '"nana-health: \(.score) \(.status) flags=\(.flags)"' reports/risk-latest.json
