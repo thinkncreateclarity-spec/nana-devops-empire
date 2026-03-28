@@ -45,31 +45,39 @@ def parse_report_file(path):
     criteria_total = None
 
     for line in lines:
-        m = re.match(r'^**Subsystem:**s*(.+?)s*$', line)
+            # Subsystem: timer
+        m = re.match(r'^Subsystem:s*(.+?)s*$', line)
         if m:
-            subsystem = m.group(1).strip()
-            continue
+                subsystem = m.group(1).strip()
+                continue
 
-        m = re.match(r'^**Status:**s*(.+?)s*$', line)
+            # Status: ✅ PASS (2/2 criteria met)
+        m = re.match(r'^Status:s*(.+?)s*$', line)
         if m:
-            status_text = m.group(1).strip()
-            if 'PASS' in status_text:
-                status = 'PASS'
-            elif 'FAIL' in status_text:
-                status = 'FAIL'
+                status_text = m.group(1).strip()
+                if 'PASS' in status_text:
+                    status = 'PASS'
+                elif 'FAIL' in status_text:
+                    status = 'FAIL'
 
-            count_match = re.search(r'(d+)s*/s*(d+)s*criteria met', status_text, re.I)
-            if count_match:
-                criteria_met = int(count_match.group(1))
-                criteria_total = int(count_match.group(2))
-            else:
-                count_match = re.search(r'(d+)s*/s*(d+)', status_text)
+                count_match = re.search(r'((d+)s*/s*(d+)s*criteria met)', status_text, re.I)
                 if count_match:
                     criteria_met = int(count_match.group(1))
                     criteria_total = int(count_match.group(2))
-            continue
+                else:
+                    count_match = re.search(r'((d+)s*/s*(d+))', status_text)
+                    if count_match:
+                        criteria_met = int(count_match.group(1))
+                        criteria_total = int(count_match.group(2))
+                continue
+        else:
+                count_match = re.search(r'(\d+)\s*/\s*(\d+)', status_text)
+                if count_match:
+                    criteria_met = int(count_match.group(1))
+                    criteria_total = int(count_match.group(2))
+        continue
 
-        m = re.match(r'^Pass:s*(d+)s*/s*(d+)s*criteria mets*$', line, re.I)
+        m = re.match(r'^Pass:\s*(\d+)\s*/\s*(\d+)\s*criteria mets*$', line, re.I)
         if m and criteria_met is None:
             criteria_met = int(m.group(1))
             criteria_total = int(m.group(2))

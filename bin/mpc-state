@@ -1,1 +1,3 @@
-/data/data/com.termux/files/home/nana-devops/todo-cli/mpc-state.js
+#!/data/data/com.termux/files/usr/bin/bash
+echo "mpc-state: not implemented in nana-devops-empire (stub)." >&2
+exit 1
